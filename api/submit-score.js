@@ -5,21 +5,24 @@ export default async function handler(req, res) {
 
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    // URL Web App Google Apps Script yang baru
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGhk7HCM76ortAHo3Nv255HBSjghbwocOXw6fp5PpWhBLMDa4r_GFjH3ULfZGlUggy/exec"; 
+    // URL Web App Google Apps Script Baru Anda
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzSkR7X9mdGa8XEQ_QEw8nx9Q3ml-oDcXedaObilNOIjDPRKtf3w19pboeGyHfgcb9-/exec"; 
 
     if (req.method === 'POST') {
         try {
-            const { finalScore, details } = req.body || {};
+            const { action = "submit-score", finalScore, details, key, value, userId } = req.body || {};
             
-            // Forward data ke Google Apps Script
+            // Mengirimkan data ke Google Apps Script
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    action: "submit-score", 
+                    action: action, 
                     finalScore: Number(finalScore) || 0,
-                    details: details || {}
+                    details: details || {},
+                    key: key,
+                    value: Number(value) || 0,
+                    userId: userId || "user_default"
                 })
             });
 
@@ -35,17 +38,18 @@ export default async function handler(req, res) {
         }
     } else if (req.method === 'GET') {
         try {
-            const response = await fetch(GOOGLE_SCRIPT_URL);
+            const userId = req.query.userId || "user_default";
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?userId=${encodeURIComponent(userId)}`);
             const textResult = await response.text();
             
             if (textResult.startsWith("<!DOCTYPE") || textResult.startsWith("<html")) {
-                return res.status(200).json({ scoreB6: 0, streak: 3, history: [] });
+                return res.status(200).json({ scoreB6: 0, streak: 0, history: [], details: {} });
             }
             
             const data = JSON.parse(textResult);
             return res.status(200).json(data);
         } catch (err) {
-            return res.status(200).json({ scoreB6: 0, streak: 3, history: [], error: err.message });
+            return res.status(200).json({ scoreB6: 0, streak: 0, history: [], details: {}, error: err.message });
         }
     } else {
         return res.status(405).json({ error: 'Metode tidak diizinkan.' });
